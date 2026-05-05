@@ -1,0 +1,153 @@
+{
+  "_comment": "Configuration for wb_results_map.py. Built-in DEFAULTS in the script provide all of these values; you only need to override the ones you want to change. The script falls back to defaults for any key not specified here.",
+
+  "request": {
+    "_comment": "Network behaviour for the ECI scrape. Increase delay if you see 403s; bump tls_impersonate if Chrome 124's TLS fingerprint stops working.",
+    "delay_seconds":   0.8,
+    "tls_impersonate": "chrome124"
+  },
+
+  "outputs": {
+    "_comment": "Templates substitute {state_slug} (e.g. 'wb', 'tn') and {state_name}.",
+    "map_title_template":   "{state_name} Assembly Election 2026 — Leading Party",
+    "results_csv_template": "{state_slug}_results.csv",
+    "map_html_template":    "{state_slug}_results_map.html"
+  },
+
+  "fonts": {
+    "_comment": "Font sizes (px) for in-map UI elements at 100% browser zoom. legend_table_px = both the Party/Seats and Margin/buckets tables AND the AC-details card text by default. card_text_px overrides card text size independently of the tables. candidate_popup_px overrides the size of the candidate-list modal that opens on margin-table cell click (defaults to card_text_px). margin_overlay_px = tiny black numbers shown at AC centroids when 'Overlay victory margins' is on.",
+    "legend_table_px":    12,
+    "card_text_px":       null,
+    "candidate_popup_px": null,
+    "margin_overlay_px":  9
+  },
+
+  "_party_palette_comment": "Single source of truth for party colour + abbreviation. Order matters only insofar as the *first* alias-match wins. The LAST entry — with full_name=null — is the catch-all 'all other parties'. The palette uses light pastel shades for AC fills, leaving room for two darkening levels in the interactive UI.",
+  "party_palette": [
+    {"full_name": "Bharatiya Janata Party",                          "abbr": "BJP",     "hex": "#FFE9C9", "aliases": ["bjp"]},
+    {"full_name": "All India Trinamool Congress",                    "abbr": "TMC",     "hex": "#D9EEDA", "aliases": ["aitc", "tmc", "trinamool congress", "aitmc"]},
+    {"full_name": "Indian National Congress",                        "abbr": "INC",     "hex": "#FFDBD0", "aliases": ["inc", "congress"]},
+    {"full_name": "Samajwadi Party",                                 "abbr": "SP",      "hex": "#F7C3C2", "aliases": ["sp"]},
+    {"full_name": "Bahujan Samaj Party",                             "abbr": "BSP",     "hex": "#BBDBF7", "aliases": ["bsp"]},
+    {"full_name": "Aam Aadmi Party",                                 "abbr": "AAP",     "hex": "#B2E6EC", "aliases": ["aap"]},
+    {"full_name": "Rashtriya Janata Dal",                            "abbr": "RJD",     "hex": "#C6E2C7", "aliases": ["rjd"]},
+    {"full_name": "Janata Dal (United)",                             "abbr": "JD(U)",   "hex": "#D7E8C6", "aliases": ["jd(u)", "jdu"]},
+    {"full_name": "Shiv Sena (Uddhav Balasaheb Thackeray)",          "abbr": "SS(UBT)", "hex": "#FFDDB2", "aliases": ["ss(ubt)", "ssubt", "shiv sena ubt"]},
+    {"full_name": "Shiv Sena (Eknath Shinde)",                       "abbr": "SS",      "hex": "#FFD3B2", "aliases": ["shiv sena", "ss(shinde)", "ss shinde"]},
+    {"full_name": "Nationalist Congress Party (Sharad Pawar)",       "abbr": "NCP(SP)", "hex": "#CED2EC", "aliases": ["ncp(sp)", "ncpsp"]},
+    {"full_name": "Dravida Munnetra Kazhagam",                       "abbr": "DMK",     "hex": "#EDBEBE", "aliases": ["dmk"]},
+    {"full_name": "All India Anna Dravida Munnetra Kazhagam",        "abbr": "AIADMK",  "hex": "#D7BBE3", "aliases": ["aiadmk"]},
+    {"full_name": "Yuvajana Sramika Rythu Congress Party",           "abbr": "YSRCP",   "hex": "#FDDCB2", "aliases": ["ysrcp", "ysr congress"]},
+    {"full_name": "Bharat Rashtra Samithi",                          "abbr": "BRS",     "hex": "#F9C5D7", "aliases": ["brs"]},
+    {"full_name": "All India Majlis-e-Ittehadul Muslimeen",          "abbr": "AIMIM",   "hex": "#B2DBD7", "aliases": ["aimim"]},
+    {"full_name": "Communist Party of India (Marxist)",              "abbr": "CPI(M)",  "hex": "#E9BABA", "aliases": ["cpi(m)", "cpim", "communist party of india  (marxist)"]},
+    {"full_name": "Telugu Desam Party",                              "abbr": "TDP",     "hex": "#FDECC0", "aliases": ["tdp"]},
+    {"full_name": "Janata Dal (Secular)",                            "abbr": "JD(S)",   "hex": "#CEC5C3", "aliases": ["jd(s)", "jds"]},
+    {"full_name": "Jharkhand Mukti Morcha",                          "abbr": "JMM",     "hex": "#C0D8C1", "aliases": ["jmm"]},
+    {"full_name": "Lok Janshakti Party (Ram Vilas)",                 "abbr": "LJP(RV)", "hex": "#C3C8E5", "aliases": ["ljp(rv)", "ljprv"]},
+    {"full_name": null,                                              "abbr": "Others",  "hex": "#CCCCCC", "aliases": []}
+  ],
+
+  "no_data_color": "#E5E5E5",
+
+  "margin_buckets": {
+    "_comment": "Upper bounds (exclusive) for each bucket, shown left to right. The final bucket has no upper bound (>= last threshold). Edit freely.",
+    "thresholds": [500, 1000, 2500, 5000, 7500, 10000]
+  },
+
+  "states": {
+    "_comment": "Per-state configuration. Each state needs: name, eci_code (e.g. 'S25'), page_count, expected_ac_count, boundaries source, and optional CSV paths for electors / muslim_csv / asdd_csv.",
+
+    "wb": {
+      "name":              "West Bengal",
+      "eci_code":          "S25",
+      "page_count":        15,
+      "expected_ac_count": 294,
+      "boundaries": {
+        "format":     "kml",
+        "url":        "https://data.opencity.in/dataset/8dfb542d-2303-43be-a8ef-720f2034875e/resource/60af793c-79c0-4244-ba63-cf4c718aa745/download/wb_acs_map.kml",
+        "cache_path": "wb_acs_map.kml"
+      },
+      "electors_csv": "wb_acwise_elector_2026.csv",
+      "muslim_csv":   "wb_muslim_percentage.csv",
+      "asdd_csv":     "wb_ac_asdd.csv"
+    },
+
+    "tn": {
+      "name":              "Tamil Nadu",
+      "eci_code":          "S22",
+      "page_count":        12,
+      "expected_ac_count": 234,
+      "boundaries": {
+        "format":     "kml",
+        "url":        "https://data.opencity.in/dataset/0b8bf444-411e-413b-ba09-148afc76a79f/resource/83e523a9-a038-4df7-8f9b-7fbb2237acfd/download/tn_acs_map.kml",
+        "cache_path": "tn_acs_map.kml"
+      },
+      "electors_csv": "tn_electors.csv",
+      "muslim_csv":   "tn_muslim_percentage.csv"
+    },
+
+    "as": {
+      "name":              "Assam",
+      "eci_code":          "S03",
+      "page_count":        7,
+      "expected_ac_count": 126,
+      "boundaries": {
+        "_comment":          "Single India-wide GeoJSONL bundle, filtered by ST_NAME=ASSAM.",
+        "format":            "geojsonl_7z",
+        "url":               "https://github.com/ramSeraph/indian_admin_boundaries/releases/download/constituencies/LGD_Assembly_Constituencies.geojsonl.7z",
+        "cache_path":        "LGD_Assembly_Constituencies.geojsonl.7z",
+        "extract_dir":       "lgd_acs",
+        "state_name_filter": "ASSAM"
+      },
+      "electors_csv":     "as_electors.csv",
+      "electors_pdf_url": "https://ceoassam.nic.in/summary/2026/Draft_Electors_27-12-2025.pdf",
+      "muslim_csv":       "as_muslim_percentage.csv"
+    },
+
+    "kl": {
+      "name":              "Kerala",
+      "eci_code":          "S11",
+      "page_count":        7,
+      "expected_ac_count": 140,
+      "boundaries": {
+        "format":            "geojsonl_7z",
+        "url":               "https://github.com/ramSeraph/indian_admin_boundaries/releases/download/constituencies/LGD_Assembly_Constituencies.geojsonl.7z",
+        "cache_path":        "LGD_Assembly_Constituencies.geojsonl.7z",
+        "extract_dir":       "lgd_acs",
+        "state_name_filter": "KERALA"
+      },
+      "electors_csv":     "kl_electors.csv",
+      "electors_pdf_url": "https://www.ceo.kerala.gov.in/ceokerala/pdf/govt_orders/legislative-assembly-2026/electorate-published-as-on-23-march-2026.pdf",
+      "muslim_csv":       "kl_muslim_percentage.csv"
+    },
+
+    "py": {
+      "name":              "Puducherry",
+      "eci_code":          "U07",
+      "page_count":        2,
+      "expected_ac_count": 30,
+      "boundaries": {
+        "format":            "geojsonl_7z",
+        "url":               "https://github.com/ramSeraph/indian_admin_boundaries/releases/download/constituencies/LGD_Assembly_Constituencies.geojsonl.7z",
+        "cache_path":        "LGD_Assembly_Constituencies.geojsonl.7z",
+        "extract_dir":       "lgd_acs",
+        "state_name_filter": "PUDUCHERRY"
+      },
+      "electors_csv": "py_electors.csv",
+      "muslim_csv":   "py_muslim_percentage.csv"
+    }
+  },
+
+  "boundaries_schema": {
+    "_comment": "Property-name candidates for the boundary loader to identify AC number / name fields across different schemas.",
+    "ac_number_field_candidates": [
+      "AC_NO", "ac_no", "AC_No", "ACNO", "ac_number",
+      "AC_CODE", "AC_Code", "no", "NO", "Number", "AC"
+    ],
+    "ac_name_field_candidates": [
+      "AC_NAME", "ac_name", "AC_Name", "Name", "NAME", "name",
+      "constituency", "Constituency", "_kml_name"
+    ]
+  }
+}

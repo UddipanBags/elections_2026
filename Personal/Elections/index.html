@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>India Assembly Elections 2026 — Results Maps</title>
+  <meta name="description" content="Interactive constituency-level results maps for the 2026 assembly elections in West Bengal, Tamil Nadu, Assam, Kerala, and Puducherry.">
+
+  <!--
+    Editorial-analytical aesthetic. Serif display + humanist sans body.
+    Party palette colours carry the visual interest against a near-monochrome
+    page chrome. No load animations — this is a results reference, not a
+    splash page; users have arrived for data.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------- design tokens ---------- */
+    :root {
+      --paper:        #FAFAF7;
+      --paper-2:      #F2F1EB;
+      --ink:          #1A1A1A;
+      --ink-soft:     #4A4843;
+      --ink-mute:     #8C887F;
+      --rule:         #D9D6CC;
+      --accent-ink:   #38322A;
+      --accent-warm:  #B5562F;   /* used very sparingly — page-title flourish only */
+      --serif:        'Fraunces', Georgia, 'Times New Roman', serif;
+      --sans:         'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+      --mono:         'IBM Plex Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "kern" 1, "tnum" 0;
+    }
+
+    /* ---------- layout ---------- */
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    @media (min-width: 720px) {
+      .page { padding: 96px 48px 120px; }
+    }
+
+    /* ---------- masthead ---------- */
+    .masthead {
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 28px;
+      margin-bottom: 56px;
+    }
+    .masthead-eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+      margin-bottom: 12px;
+    }
+    .masthead-title {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: clamp(36px, 6.4vw, 64px);
+      line-height: 1.05;
+      letter-spacing: -0.015em;
+      margin: 0 0 16px 0;
+      color: var(--ink);
+      font-variation-settings: "opsz" 144;
+    }
+    .masthead-title em {
+      font-style: italic;
+      font-weight: 400;
+      color: var(--accent-warm);
+    }
+    .masthead-blurb {
+      font-family: var(--serif);
+      font-size: clamp(16px, 1.6vw, 19px);
+      line-height: 1.55;
+      color: var(--ink-soft);
+      max-width: 64ch;
+      margin: 0;
+      font-variation-settings: "opsz" 32;
+    }
+
+    /* ---------- state cards grid ---------- */
+    .states {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    @media (min-width: 720px) {
+      .states {
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+      }
+    }
+
+    .state-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      padding: 24px 24px 20px;
+      transition: transform 0.18s ease, border-color 0.18s ease,
+                  box-shadow 0.18s ease;
+      position: relative;
+    }
+    .state-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--ink-soft);
+      box-shadow: 0 8px 22px -10px rgba(0, 0, 0, 0.18);
+    }
+    .state-card:focus-visible {
+      outline: 2px solid var(--accent-warm);
+      outline-offset: 3px;
+    }
+
+    .card-head {
+      margin-bottom: 16px;
+    }
+    .card-rule {
+      display: block;
+      width: 32px; height: 2px;
+      background: var(--ink);
+      margin-bottom: 14px;
+    }
+    .state-name {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 30px;
+      letter-spacing: -0.012em;
+      line-height: 1.1;
+      margin: 0 0 6px 0;
+      font-variation-settings: "opsz" 72;
+    }
+    .card-meta {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .completeness {
+      color: var(--accent-warm);
+    }
+
+    /* ---------- leader line ---------- */
+    .leader-line {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      margin: 8px 0 14px 0;
+      padding-bottom: 14px;
+      border-bottom: 1px dotted var(--rule);
+    }
+    .leader-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .leader-name {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 500;
+      font-size: 22px;
+      color: var(--ink);
+      position: relative;
+      padding: 0 4px;
+      background: linear-gradient(transparent 60%, var(--accent) 60%);
+    }
+    .leader-seats {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-soft);
+      margin-left: auto;
+    }
+
+    /* ---------- stacked seat bar ---------- */
+    .seat-bar {
+      display: flex;
+      width: 100%;
+      height: 14px;
+      margin: 4px 0 16px 0;
+      border-radius: 1px;
+      overflow: hidden;
+      background: var(--paper-2);
+    }
+    .seat-bar .seg {
+      display: block;
+      height: 100%;
+      flex-shrink: 0;
+    }
+    .seat-bar .seg + .seg {
+      box-shadow: -1px 0 0 0 var(--paper);
+    }
+
+    /* ---------- party legend chips ---------- */
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin-bottom: 18px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--ink-soft);
+      font-variant-numeric: tabular-nums;
+    }
+    .chip-swatch {
+      display: inline-block;
+      width: 11px; height: 11px;
+      border-radius: 1px;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .chip-abbr {
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .chip-count {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-soft);
+    }
+    .chip-more {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-mute);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ---------- card CTA ---------- */
+    .card-cta {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      letter-spacing: 0.005em;
+      padding-top: 4px;
+      border-top: 1px solid var(--rule);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.15s ease, gap 0.15s ease;
+    }
+    .state-card:hover .card-cta {
+      color: var(--accent-warm);
+      gap: 8px;
+    }
+
+    /* ---------- footer ---------- */
+    .footer {
+      margin-top: 80px;
+      padding-top: 28px;
+      border-top: 1px solid var(--rule);
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--ink-soft);
+      max-width: 64ch;
+    }
+    .footer h3 {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+      font-weight: 500;
+      margin: 0 0 8px 0;
+    }
+    .footer p { margin: 0 0 12px 0; }
+    .footer a {
+      color: var(--ink);
+      text-decoration: underline;
+      text-decoration-color: var(--rule);
+      text-underline-offset: 3px;
+      transition: text-decoration-color 0.15s ease;
+    }
+    .footer a:hover {
+      text-decoration-color: var(--accent-warm);
+    }
+    .timestamp {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-mute);
+      letter-spacing: 0.04em;
+      margin-top: 18px;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+
+    <header class="masthead">
+      <div class="masthead-eyebrow">India · Assembly Elections · 2026</div>
+      <h1 class="masthead-title">
+        Five states. <em>One map each.</em>
+      </h1>
+      <p class="masthead-blurb">
+        Constituency-level results for the West Bengal, Tamil Nadu, Assam,
+        Kerala, and Puducherry assembly elections of 2026. Each map shows
+        the leading party in every assembly constituency, with hover
+        details, victory-margin overlays, and clickable margin buckets
+        that reveal the full candidate list for that band.
+      </p>
+    </header>
+
+    <section class="states">
+<a class="state-card" href="wb_results_map.html" data-slug="wb">
+  <div class="card-head">
+    <span class="card-rule"></span>
+    <h2 class="state-name">West Bengal</h2>
+    <span class="card-meta">
+      <span class="ac-count">294 constituencies</span>
+      
+    </span>
+  </div>
+  <div class="leader-line">  <span class="leader-label">Leading</span>  <span class="leader-name" style="--accent:#FFE9C9">    BJP  </span>  <span class="leader-seats">207 of 294</span></div>
+  <div class="seat-bar"><span class="seg" style="width:70.4082%;background:#FFE9C9;" title="Bharatiya Janata Party: 207 seats"></span><span class="seg" style="width:27.2109%;background:#D9EEDA;" title="All India Trinamool Congress: 80 seats"></span><span class="seg" style="width:0.6803%;background:#FFDBD0;" title="Indian National Congress: 2 seats"></span><span class="seg" style="width:0.6803%;background:#CCCCCC;" title="Aam Janata Unnayan party: 2 seats"></span><span class="seg" style="width:0.3401%;background:#E9BABA;" title="Communist Party of India (Marxist): 1 seats"></span><span class="seg" style="width:0.3401%;background:#CCCCCC;" title="Party Wise State Trends: 1 seats"></span><span class="seg" style="width:0.3401%;background:#CCCCCC;" title="All India Secular Front: 1 seats"></span></div>
+  <div class="legend-row"><span class="chip">  <span class="chip-swatch" style="background:#FFE9C9"></span>  <span class="chip-abbr">BJP</span>  <span class="chip-count">207</span></span><span class="chip">  <span class="chip-swatch" style="background:#D9EEDA"></span>  <span class="chip-abbr">TMC</span>  <span class="chip-count">80</span></span><span class="chip">  <span class="chip-swatch" style="background:#FFDBD0"></span>  <span class="chip-abbr">INC</span>  <span class="chip-count">2</span></span><span class="chip">  <span class="chip-swatch" style="background:#CCCCCC"></span>  <span class="chip-abbr">Others</span>  <span class="chip-count">2</span></span><span class="chip chip-more">+3 more · 3</span></div>
+  <div class="card-cta">View map &rarr;</div>
+</a>
+<a class="state-card" href="tn_results_map.html" data-slug="tn">
+  <div class="card-head">
+    <span class="card-rule"></span>
+    <h2 class="state-name">Tamil Nadu</h2>
+    <span class="card-meta">
+      <span class="ac-count">234 constituencies</span>
+      
+    </span>
+  </div>
+  <div class="leader-line">  <span class="leader-label">Leading</span>  <span class="leader-name" style="--accent:#D5C7E0">    TVK  </span>  <span class="leader-seats">108 of 234</span></div>
+  <div class="seat-bar"><span class="seg" style="width:46.1538%;background:#D5C7E0;" title="Tamilaga Vettri Kazhagam: 108 seats"></span><span class="seg" style="width:25.2137%;background:#EDBEBE;" title="Dravida Munnetra Kazhagam: 59 seats"></span><span class="seg" style="width:20.0855%;background:#D7BBE3;" title="All India Anna Dravida Munnetra Kazhagam: 47 seats"></span><span class="seg" style="width:2.1368%;background:#FFDBD0;" title="Indian National Congress: 5 seats"></span><span class="seg" style="width:1.7094%;background:#E0C9D5;" title="Pattali Makkal Katchi: 4 seats"></span><span class="seg" style="width:0.8547%;background:#C8DCC2;" title="Indian Union Muslim League: 2 seats"></span><span class="seg" style="width:0.8547%;background:#F0C9C9;" title="Communist Party of India: 2 seats"></span><span class="seg" style="width:0.8547%;background:#C7D5E0;" title="Viduthalai Chiruthaigal Katchi: 2 seats"></span><span class="seg" style="width:0.8547%;background:#E9BABA;" title="Communist Party of India (Marxist): 2 seats"></span><span class="seg" style="width:0.4274%;background:#FFE9C9;" title="Bharatiya Janata Party: 1 seats"></span><span class="seg" style="width:0.4274%;background:#CCCCCC;" title="Desiya Murpokku Dravida Kazhagam: 1 seats"></span><span class="seg" style="width:0.4274%;background:#CCCCCC;" title="Amma Makkal Munnettra Kazagam: 1 seats"></span></div>
+  <div class="legend-row"><span class="chip">  <span class="chip-swatch" style="background:#D5C7E0"></span>  <span class="chip-abbr">TVK</span>  <span class="chip-count">108</span></span><span class="chip">  <span class="chip-swatch" style="background:#EDBEBE"></span>  <span class="chip-abbr">DMK</span>  <span class="chip-count">59</span></span><span class="chip">  <span class="chip-swatch" style="background:#D7BBE3"></span>  <span class="chip-abbr">AIADMK</span>  <span class="chip-count">47</span></span><span class="chip">  <span class="chip-swatch" style="background:#FFDBD0"></span>  <span class="chip-abbr">INC</span>  <span class="chip-count">5</span></span><span class="chip chip-more">+8 more · 15</span></div>
+  <div class="card-cta">View map &rarr;</div>
+</a>
+<a class="state-card" href="as_results_map.html" data-slug="as">
+  <div class="card-head">
+    <span class="card-rule"></span>
+    <h2 class="state-name">Assam</h2>
+    <span class="card-meta">
+      <span class="ac-count">126 constituencies</span>
+      
+    </span>
+  </div>
+  <div class="leader-line">  <span class="leader-label">Leading</span>  <span class="leader-name" style="--accent:#FFE9C9">    BJP  </span>  <span class="leader-seats">82 of 126</span></div>
+  <div class="seat-bar"><span class="seg" style="width:65.0794%;background:#FFE9C9;" title="Bharatiya Janata Party: 82 seats"></span><span class="seg" style="width:15.0794%;background:#FFDBD0;" title="Indian National Congress: 19 seats"></span><span class="seg" style="width:7.9365%;background:#D6CDB8;" title="Bodoland Peoples Front: 10 seats"></span><span class="seg" style="width:7.9365%;background:#C8DBE0;" title="Asom Gana Parishad: 10 seats"></span><span class="seg" style="width:1.5873%;background:#C2D7DC;" title="All India United Democratic Front: 2 seats"></span><span class="seg" style="width:1.5873%;background:#D8C2C7;" title="Raijor Dal: 2 seats"></span><span class="seg" style="width:0.7937%;background:#D9EEDA;" title="All India Trinamool Congress: 1 seats"></span></div>
+  <div class="legend-row"><span class="chip">  <span class="chip-swatch" style="background:#FFE9C9"></span>  <span class="chip-abbr">BJP</span>  <span class="chip-count">82</span></span><span class="chip">  <span class="chip-swatch" style="background:#FFDBD0"></span>  <span class="chip-abbr">INC</span>  <span class="chip-count">19</span></span><span class="chip">  <span class="chip-swatch" style="background:#D6CDB8"></span>  <span class="chip-abbr">BPF</span>  <span class="chip-count">10</span></span><span class="chip">  <span class="chip-swatch" style="background:#C8DBE0"></span>  <span class="chip-abbr">AGP</span>  <span class="chip-count">10</span></span><span class="chip chip-more">+3 more · 5</span></div>
+  <div class="card-cta">View map &rarr;</div>
+</a>
+<a class="state-card" href="kl_results_map.html" data-slug="kl">
+  <div class="card-head">
+    <span class="card-rule"></span>
+    <h2 class="state-name">Kerala</h2>
+    <span class="card-meta">
+      <span class="ac-count">140 constituencies</span>
+      
+    </span>
+  </div>
+  <div class="leader-line">  <span class="leader-label">Leading</span>  <span class="leader-name" style="--accent:#FFDBD0">    INC  </span>  <span class="leader-seats">63 of 140</span></div>
+  <div class="seat-bar"><span class="seg" style="width:45.0000%;background:#FFDBD0;" title="Indian National Congress: 63 seats"></span><span class="seg" style="width:18.5714%;background:#E9BABA;" title="Communist Party of India (Marxist): 26 seats"></span><span class="seg" style="width:15.7143%;background:#C8DCC2;" title="Indian Union Muslim League: 22 seats"></span><span class="seg" style="width:5.7143%;background:#F0C9C9;" title="Communist Party of India: 8 seats"></span><span class="seg" style="width:5.0000%;background:#D8E0BC;" title="Kerala Congress: 7 seats"></span><span class="seg" style="width:2.8571%;background:#D6D0CB;" title="Independent: 4 seats"></span><span class="seg" style="width:2.1429%;background:#E0C7C2;" title="Revolutionary Socialist Party: 3 seats"></span><span class="seg" style="width:2.1429%;background:#FFE9C9;" title="Bharatiya Janata Party: 3 seats"></span><span class="seg" style="width:0.7143%;background:#C6E2C7;" title="Rashtriya Janata Dal: 1 seats"></span><span class="seg" style="width:0.7143%;background:#CCCCCC;" title="Revolutionary Marxist Party of India: 1 seats"></span><span class="seg" style="width:0.7143%;background:#CCCCCC;" title="Kerala Congress (Jacob): 1 seats"></span><span class="seg" style="width:0.7143%;background:#CCCCCC;" title="Communist Marxist Party Kerala State Committee: 1 seats"></span></div>
+  <div class="legend-row"><span class="chip">  <span class="chip-swatch" style="background:#FFDBD0"></span>  <span class="chip-abbr">INC</span>  <span class="chip-count">63</span></span><span class="chip">  <span class="chip-swatch" style="background:#E9BABA"></span>  <span class="chip-abbr">CPI(M)</span>  <span class="chip-count">26</span></span><span class="chip">  <span class="chip-swatch" style="background:#C8DCC2"></span>  <span class="chip-abbr">IUML</span>  <span class="chip-count">22</span></span><span class="chip">  <span class="chip-swatch" style="background:#F0C9C9"></span>  <span class="chip-abbr">CPI</span>  <span class="chip-count">8</span></span><span class="chip chip-more">+8 more · 21</span></div>
+  <div class="card-cta">View map &rarr;</div>
+</a>
+<a class="state-card" href="py_results_map.html" data-slug="py">
+  <div class="card-head">
+    <span class="card-rule"></span>
+    <h2 class="state-name">Puducherry</h2>
+    <span class="card-meta">
+      <span class="ac-count">30 constituencies</span>
+      
+    </span>
+  </div>
+  <div class="leader-line">  <span class="leader-label">Leading</span>  <span class="leader-name" style="--accent:#FBD9C0">    AINRC  </span>  <span class="leader-seats">12 of 30</span></div>
+  <div class="seat-bar"><span class="seg" style="width:40.0000%;background:#FBD9C0;" title="All India N.R. Congress: 12 seats"></span><span class="seg" style="width:16.6667%;background:#EDBEBE;" title="Dravida Munnetra Kazhagam: 5 seats"></span><span class="seg" style="width:13.3333%;background:#FFE9C9;" title="Bharatiya Janata Party: 4 seats"></span><span class="seg" style="width:10.0000%;background:#D6D0CB;" title="Independent: 3 seats"></span><span class="seg" style="width:6.6667%;background:#D5C7E0;" title="Tamilaga Vettri Kazhagam: 2 seats"></span><span class="seg" style="width:3.3333%;background:#FFDBD0;" title="Indian National Congress: 1 seats"></span><span class="seg" style="width:3.3333%;background:#CCCCCC;" title="Latchiya Jananayaka Katchi (LJK): 1 seats"></span><span class="seg" style="width:3.3333%;background:#D7BBE3;" title="All India Anna Dravida Munnetra Kazhagam: 1 seats"></span><span class="seg" style="width:3.3333%;background:#CCCCCC;" title="Neyam Makkal Kazhagam: 1 seats"></span></div>
+  <div class="legend-row"><span class="chip">  <span class="chip-swatch" style="background:#FBD9C0"></span>  <span class="chip-abbr">AINRC</span>  <span class="chip-count">12</span></span><span class="chip">  <span class="chip-swatch" style="background:#EDBEBE"></span>  <span class="chip-abbr">DMK</span>  <span class="chip-count">5</span></span><span class="chip">  <span class="chip-swatch" style="background:#FFE9C9"></span>  <span class="chip-abbr">BJP</span>  <span class="chip-count">4</span></span><span class="chip">  <span class="chip-swatch" style="background:#D6D0CB"></span>  <span class="chip-abbr">Ind.</span>  <span class="chip-count">3</span></span><span class="chip chip-more">+5 more · 6</span></div>
+  <div class="card-cta">View map &rarr;</div>
+</a>
+    </section>
+
+    <footer class="footer">
+      <h3>Sources & Credits</h3>
+      <p>
+        Election results scraped from the
+        <a href="https://results.eci.gov.in/" rel="noopener">Election Commission of India</a>.
+        Constituency boundaries from
+        <a href="https://data.opencity.in/" rel="noopener">OpenCity</a>
+        (West Bengal, Tamil Nadu) and
+        <a href="https://github.com/ramSeraph/indian_admin_boundaries" rel="noopener">ramSeraph/indian_admin_boundaries</a>
+        (Assam, Kerala, Puducherry), both released under CC-BY.
+        Base map tiles by
+        <a href="https://carto.com/attributions" rel="noopener">CARTO</a>,
+        with data from
+        <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap contributors</a>.
+      </p>
+      <h3 style="margin-top:24px">Notes</h3>
+      <p>
+        Each state map is a self-contained HTML file with the data baked in.
+        The pages need an internet connection only for the base-map tiles and
+        client-side libraries (Leaflet, etc.); all results, candidate lists,
+        and constituency geometries are embedded.
+      </p>
+      <div class="timestamp">Generated 5 May 2026</div>
+    </footer>
+
+  </main>
+</body>
+</html>
