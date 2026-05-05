@@ -925,16 +925,8 @@
         document.addEventListener("keydown", (e) => {
           if (e.key === "Escape" && modal.style.display !== "none") hideModal();
         });
-        document.addEventListener("click", (ev) => {
-          if (modal.style.display === "none") return;
-          // If the click was inside the panel, ignore.
-          if (modal.contains(ev.target)) return;
-          // If the click was on a margin-table cell, ignore (its own handler
-          // will switch the panel content).
-          const onCell = ev.target.closest && ev.target.closest("#margin-table .cand-cell");
-          if (onCell) return;
-          hideModal();
-        }, true);  // capture phase, so we beat any stopPropagation downstream
+        // Outside-click dismissal removed — was conflicting with map panning.
+        // Panel is now dismissed only via the × button or Esc key.
 
         // Re-position the panel on window resize (legend / card may shift).
         window.addEventListener("resize", () => {
