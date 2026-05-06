@@ -61,6 +61,72 @@
                 box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
       Tamil Nadu Assembly Election 2026 — Leading Party
     </div>
+    <!-- Search box: sits directly below the map-title card. Type any part
+         of an AC name (or its number); a dropdown lists matches in
+         descending fuzzy-score order. Picking one populates the AC details
+         card and highlights the constituency on the map for 5 seconds. -->
+    <div id="ac-search-wrap"
+         style="position: fixed; top: 56px; left: 60px; z-index: 9998;
+                width: 320px;
+                font: 13px -apple-system, system-ui, sans-serif;">
+      <input id="ac-search-input"
+             type="text"
+             autocomplete="off"
+             spellcheck="false"
+             placeholder="Search constituency by name or number…"
+             style="box-sizing: border-box;
+                    width: 100%;
+                    padding: 7px 12px;
+                    border: 1px solid #888;
+                    border-radius: 4px;
+                    background: rgba(255,255,255,0.96);
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                    font: inherit; color: #222;
+                    outline: none;">
+      <div id="ac-search-results"
+           style="display: none;
+                  margin-top: 4px;
+                  max-height: 280px;
+                  overflow-y: auto;
+                  background: rgba(255,255,255,0.98);
+                  border: 1px solid #888;
+                  border-radius: 4px;
+                  box-shadow: 0 4px 10px rgba(0,0,0,0.18);"></div>
+    </div>
+    <style>
+      #ac-search-input:focus {
+        border-color: #5b8fbf;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15), 0 0 0 2px rgba(91,143,191,0.18);
+      }
+      #ac-search-results .ac-search-row {
+        padding: 6px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        display: flex; align-items: baseline; gap: 8px;
+      }
+      #ac-search-results .ac-search-row:last-child { border-bottom: none; }
+      #ac-search-results .ac-search-row:hover,
+      #ac-search-results .ac-search-row.ac-search-active {
+        background: #eef4fa;
+      }
+      #ac-search-results .ac-search-name { color: #222; flex: 1 1 auto; }
+      #ac-search-results .ac-search-num  {
+        color: #888; font-size: 11px; font-variant-numeric: tabular-nums;
+      }
+      #ac-search-results .ac-search-empty {
+        padding: 10px 12px; color: #888; font-style: italic;
+      }
+      .ac-search-flash {
+        /* Heavy outline applied for 5s on a picked feature. The
+           !important is needed because Folium's mouseover/mouseout
+           handlers also call setStyle, and our class-based outline
+           must override their inline style for the highlight window. */
+        stroke: #d33 !important;
+        stroke-width: 4 !important;
+        stroke-opacity: 1 !important;
+      }
+    </style>
+
     
     
     <style>
@@ -912,6 +978,260 @@
           });
         }
 
+        // ----- AC search box ----------------------------------------------
+        // Reads features from acLayer (already discovered above), builds a
+        // small searchable index, scores user input with a custom fuzzy
+        // matcher (substring + Levenshtein + token-set), and on pick
+        //   (a) calls updateCard() to populate the AC details card,
+        //   (b) flashes the feature with a thick red outline for 5s,
+        //   (c) pans/zooms the map to fit the feature.
+        // No external fuzzy library — keeps the HTML self-contained.
+        (function setupSearch() {
+          const inputEl   = document.getElementById("ac-search-input");
+          const resultsEl = document.getElementById("ac-search-results");
+          if (!inputEl || !resultsEl || !acLayer) return;
+
+          // Build the searchable index: one entry per feature, with a few
+          // pre-computed strings to make scoring cheap on each keystroke.
+          //   - name:      the display name as the user sees it
+          //   - normName:  lowercased, parens stripped, collapsed whitespace
+          //   - tokens:    set of normalised tokens (for set-overlap scoring)
+          //   - constNo:   AC number as a string (for numeric match)
+          //   - layer:     the Leaflet sub-layer (for setStyle / fitBounds)
+          const features = [];
+          acLayer.eachLayer((sub) => {
+            if (!sub.feature || !sub.feature.properties) return;
+            const p = sub.feature.properties;
+            const name = p.tt_constituency || "";
+            if (!name) return;
+            // Normalise for matching: lowercase, replace non-alphanumeric
+            // (parens, apostrophes, hyphens) with spaces, collapse runs.
+            // We DON'T strip parenthetical content like "(Sc)" / "(St)" —
+            // users may legitimately search by reservation suffix.
+            const norm = name.toLowerCase()
+                            .replace(/[^a-z0-9 ]+/g, " ")
+                            .replace(/\s+/g, " ").trim();
+            const tokens = new Set(norm.split(" ").filter(Boolean));
+            features.push({
+              name:    name,
+              normName: norm,
+              tokens:  tokens,
+              constNo: p.const_no != null ? String(p.const_no) : "",
+              layer:   sub,
+              props:   p,
+            });
+          });
+
+          // ----- Fuzzy scoring -------------------------------------------
+          // Returns a score in [0..100]. >=30 is shown to user.
+          function levenshtein(a, b) {
+            // Classic DP, bounded by max-distance for early-exit speed.
+            // For our query lengths (a, b < ~30 chars), this is fast.
+            const m = a.length, n = b.length;
+            if (!m) return n; if (!n) return m;
+            let prev = new Array(n + 1);
+            for (let j = 0; j <= n; j++) prev[j] = j;
+            for (let i = 1; i <= m; i++) {
+              let cur = [i];
+              for (let j = 1; j <= n; j++) {
+                const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+                cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost));
+              }
+              prev = cur;
+            }
+            return prev[n];
+          }
+
+          function score(query, feat) {
+            const q = query.toLowerCase().trim();
+            if (!q) return 0;
+
+            // Numeric query: match against const_no with a high score.
+            if (/^\d+$/.test(q) && feat.constNo) {
+              if (feat.constNo === q) return 100;
+              if (feat.constNo.startsWith(q)) return 80;
+              if (feat.constNo.includes(q))   return 60;
+            }
+
+            const target = feat.normName;
+            const qNorm  = q.replace(/[^a-z0-9 ]+/g, " ")
+                            .replace(/\s+/g, " ").trim();
+            if (!qNorm) return 0;
+
+            // Exact match (after normalisation): max score.
+            if (target === qNorm) return 100;
+
+            // Prefix match: strong score, decaying with target excess.
+            if (target.startsWith(qNorm)) {
+              return Math.max(70, 95 - (target.length - qNorm.length));
+            }
+
+            // Substring match anywhere: medium score.
+            if (target.includes(qNorm)) {
+              const pos = target.indexOf(qNorm);
+              return Math.max(50, 80 - pos - (target.length - qNorm.length));
+            }
+
+            // Token-set overlap: helps when query words are reordered or
+            // partial. e.g. 'sc ponneri' should match 'Ponneri (Sc)' (Sc
+            // gets stripped from target so this becomes ['sc', 'ponneri']
+            // vs ['ponneri'] — partial overlap).
+            const qTokens = new Set(qNorm.split(" ").filter(Boolean));
+            let overlap = 0;
+            for (const t of qTokens) {
+              if (feat.tokens.has(t)) overlap++;
+              else {
+                // Partial token match: any target token starts-with this q-token.
+                for (const tt of feat.tokens) {
+                  if (tt.startsWith(t) && t.length >= 2) { overlap += 0.6; break; }
+                }
+              }
+            }
+            const tokenScore = qTokens.size
+              ? Math.round(45 * (overlap / qTokens.size))
+              : 0;
+
+            // Levenshtein on whole strings: tolerates typos. Score is
+            // (1 - distance/max_len) * 40, capped.
+            const dist = levenshtein(qNorm, target);
+            const maxLen = Math.max(qNorm.length, target.length);
+            const levScore = Math.round(40 * Math.max(0, 1 - dist / Math.max(1, maxLen)));
+
+            return Math.max(tokenScore, levScore);
+          }
+
+          // ----- Rendering & selection -----------------------------------
+          let activeIdx = -1;     // currently keyboard-highlighted row
+          let lastResults = [];   // most recent scored results (for selection)
+
+          function renderResults(query) {
+            if (!query.trim()) {
+              resultsEl.style.display = "none";
+              resultsEl.innerHTML = "";
+              return;
+            }
+            const scored = features
+              .map((f) => ({f, s: score(query, f)}))
+              .filter((x) => x.s >= 30)
+              .sort((a, b) => b.s - a.s)
+              .slice(0, 12);
+            lastResults = scored;
+            activeIdx = -1;
+
+            if (scored.length === 0) {
+              resultsEl.innerHTML =
+                '<div class="ac-search-empty">No matching constituencies</div>';
+              resultsEl.style.display = "block";
+              return;
+            }
+            const html = scored.map((x, i) => {
+              const num = x.f.constNo ? `AC ${x.f.constNo}` : "";
+              return `<div class="ac-search-row" data-idx="${i}">
+                        <span class="ac-search-name">${x.f.name}</span>
+                        <span class="ac-search-num">${num}</span>
+                      </div>`;
+            }).join("");
+            resultsEl.innerHTML = html;
+            resultsEl.style.display = "block";
+          }
+
+          function pickResult(idx) {
+            const item = lastResults[idx];
+            if (!item) return;
+            const f = item.f;
+
+            // (a) Populate the AC details card via the existing function.
+            updateCard(f.props);
+            // Make sure the card is in expanded state (user may have
+            // collapsed it earlier).
+            if (typeof applyAcCardCollapsedState === "function") {
+              applyAcCardCollapsedState(false);
+            }
+
+            // (b) Highlight the feature for 5 seconds. We add a CSS class
+            //     to the underlying SVG path, which uses !important to
+            //     override any inline styles set by the mouseover/mouseout
+            //     handlers from Folium.
+            const el = f.layer.getElement && f.layer.getElement();
+            if (el) {
+              el.classList.add("ac-search-flash");
+              // Bring to front so the thick stroke isn't clipped by neighbours.
+              if (typeof f.layer.bringToFront === "function") {
+                f.layer.bringToFront();
+              }
+              setTimeout(() => {
+                el.classList.remove("ac-search-flash");
+              }, 5000);
+            }
+
+            // (c) Pan/zoom to fit the feature. maxZoom prevents zooming in
+            //     too far on tiny ACs.
+            try {
+              if (typeof f.layer.getBounds === "function") {
+                mapInstance.fitBounds(f.layer.getBounds(), {
+                  maxZoom: 10,
+                  padding: [40, 40],
+                });
+              }
+            } catch (e) { /* ignore */ }
+
+            // Close the dropdown and clear the input per spec.
+            resultsEl.style.display = "none";
+            resultsEl.innerHTML = "";
+            inputEl.value = "";
+            lastResults = [];
+            activeIdx = -1;
+          }
+
+          // ----- Event wiring --------------------------------------------
+          let debounceTimer = null;
+          inputEl.addEventListener("input", () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => renderResults(inputEl.value), 80);
+          });
+
+          inputEl.addEventListener("keydown", (ev) => {
+            if (ev.key === "Escape") {
+              resultsEl.style.display = "none";
+              inputEl.value = "";
+              return;
+            }
+            if (lastResults.length === 0) return;
+            const rows = resultsEl.querySelectorAll(".ac-search-row");
+            if (ev.key === "ArrowDown") {
+              ev.preventDefault();
+              activeIdx = Math.min(lastResults.length - 1, activeIdx + 1);
+              rows.forEach((r, i) => r.classList.toggle("ac-search-active", i === activeIdx));
+              if (rows[activeIdx]) rows[activeIdx].scrollIntoView({block: "nearest"});
+            } else if (ev.key === "ArrowUp") {
+              ev.preventDefault();
+              activeIdx = Math.max(0, activeIdx - 1);
+              rows.forEach((r, i) => r.classList.toggle("ac-search-active", i === activeIdx));
+              if (rows[activeIdx]) rows[activeIdx].scrollIntoView({block: "nearest"});
+            } else if (ev.key === "Enter") {
+              ev.preventDefault();
+              if (activeIdx >= 0) pickResult(activeIdx);
+              else if (lastResults.length > 0) pickResult(0);
+            }
+          });
+
+          resultsEl.addEventListener("click", (ev) => {
+            const row = ev.target.closest(".ac-search-row");
+            if (!row) return;
+            const idx = parseInt(row.getAttribute("data-idx"), 10);
+            if (!isNaN(idx)) pickResult(idx);
+          });
+
+          // Click outside closes the dropdown but leaves any populated
+          // card data alone (per spec).
+          document.addEventListener("click", (ev) => {
+            const wrap = document.getElementById("ac-search-wrap");
+            if (wrap && !wrap.contains(ev.target)) {
+              resultsEl.style.display = "none";
+            }
+          });
+        })();
+
         // ----- Margin-table cell-click → candidate panel --------------------
         // Each clickable cell carries data-party + data-bucket. Look those up
         // in cellData (the JSON blob serialised at build time) to get the
@@ -1042,12 +1362,25 @@
             modal.style.bottom = "200px";  // safe default
           }
 
-          // Cap max-height to leave room for the title/dropdown at the top:
-          // available = (card top) - 12px top margin - panel border allowance.
+          // Cap max-height. Modal grows upward from the AC card; we want it to
+          // stop short of the search box at the top-left so it doesn't
+          // overflow under it. Take the lower of the AC card's top edge and
+          // the search box's bottom edge (when the search box is visible).
           const cardEl2 = document.getElementById("ac-details-card");
           if (cardEl2) {
             const cardRect2 = cardEl2.getBoundingClientRect();
-            const avail = Math.max(120, cardRect2.top - 16 - 50);
+            // Default top boundary: 16px from viewport top.
+            let topBoundary = 16;
+            const searchWrap = document.getElementById("ac-search-wrap");
+            if (searchWrap) {
+              const sw = searchWrap.getBoundingClientRect();
+              // Search box is in the same horizontal column as the modal
+              // (both start at left:24..60). If the modal would overlap
+              // the search box vertically, push topBoundary down to the
+              // search box's bottom edge + 8px gap.
+              topBoundary = Math.max(topBoundary, sw.bottom + 8);
+            }
+            const avail = Math.max(120, cardRect2.top - topBoundary);
             modal.style.maxHeight = avail + "px";
           }
         }
@@ -1600,5 +1933,5 @@
             geo_json_3017aab6f6096b2428ac82fb06c8453e.addTo(map_77453f0539462511084ec576c6f25f5f);
         
 </script>
-<!-- patched: vertical-collapse + margin-pct v1 -->
+<!-- patched: vertical-collapse + margin-pct + search v2 -->
 </html>
